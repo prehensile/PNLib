@@ -1,6 +1,6 @@
 //
-//  PNMaskedView.h
-//  Created by Henry Cooke (me@prehensile.co.uk) on 2/11/10.
+//  PNCurvedCornerBox.h
+//  Created by Henry Cooke (me@prehensile.co.uk) on 20/12/10.
 //
 /*
  * The contents of this file are subject to the terms of the
@@ -18,12 +18,8 @@
 #import <UIKit/UIKit.h>
 
 
-@interface PNMaskedView : UIView {
-	UIView	*maskView;
+@interface PNCurvedCornerBox : UIView {
+
 }
-
-@property( nonatomic, retain ) UIView	*maskView;
-
--(id)initWithMaskView:(UIView*)aMaskView;
 
 @end

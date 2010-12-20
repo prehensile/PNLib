@@ -1,7 +1,6 @@
 //
 //  PNBitmapFontLabel.h
-//
-//  Created by Henry Cooke on 1/12/10.
+//  Created by Henry Cooke (me@prehensile.co.uk) on 1/12/10.
 //
 //	Uses the .fnt / .png format used in Cocos2D.
 //	More info & font export tools available at:
@@ -9,6 +8,20 @@
 //
 //	Requires iOS 3.0+
 //
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
+ *
+ * You can obtain a copy of the license at http://www.sun.com/cddl/cddl.html
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * Copyright 2010 Henry Cooke.  All rights reserved.
+ * Use is subject to license terms.
+ */
+
+#define PNBitmapFontNoPathException		@"NoFontPathException"
 
 @interface PNBitmapFontGlyph : NSObject {
 	NSString	*cid;
@@ -64,10 +77,11 @@
 
 
 @interface PNBitmapFontLabel : UILabel {
-	NSString		*text;
 	NSString		*pthFont;
 }
-@property( nonatomic, copy )	NSString		*text;
+/**
+ * The path to a .fnt file which this label will use to render text.
+ */
 @property( nonatomic, copy )	NSString		*pthFont;
 -(id)initWithFrame:(CGRect)r fntFile:(NSString*)fntPath;
 @end

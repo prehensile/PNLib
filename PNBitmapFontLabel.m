@@ -1,8 +1,20 @@
 //
 //  PNBitmapFontLabel.m
+//  Created by Henry Cooke (me@prehensile.co.uk) on 1/12/10.
 //
-//  Created by Henry Cooke on 1/12/10.
-//
+/*
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
+ *
+ * You can obtain a copy of the license at http://www.sun.com/cddl/cddl.html
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * Copyright 2010 Henry Cooke.  All rights reserved.
+ * Use is subject to license terms.
+ */
+
 
 #import "PNBitmapFontLabel.h"
 #import <QuartzCore/CALayer.h>
@@ -121,6 +133,15 @@
 
 -(void)loadParseFont{
 	
+	if( self.pthFnt == nil ){
+		// no font path, throw an exception
+		NSException *exception = [ NSException exceptionWithName: PNBitmapFontNoPathException
+														  reason: @"PNBitmapFont has no font path"
+														userInfo: nil ];
+		[ exception raise ];
+		return;
+	}
+	
 	// working vars
 	NSString *strFnt = [ NSString stringWithContentsOfFile: self.pthFnt usedEncoding: nil error: nil ];
 	NSUInteger idxStart = 0;
@@ -195,9 +216,9 @@
 	
 	if( self.dctGlyphs == nil ) [ self loadParseFont ];
 	
-	NSUInteger i=0,x=0,y=0,w=0;
-	NSUInteger h = lineHeight;
-	NSUInteger l = [ inString length ];
+	NSInteger i=0,x=0,y=0,w=0;
+	NSInteger h = lineHeight;
+	NSInteger l = [ inString length ];
 	
 	// first pass: calculate width & get glyphs
 	unichar chr;
@@ -238,7 +259,8 @@
 				imgGlyph = CGImageCreateWithImageInRect( imgPage, CGRectMake(glyph.x, glyph.y, glyph.width, glyph.height ) );
 				[ glyphCache setObject: [ NSValue valueWithNonretainedObject: (id)imgGlyph ] forKey: glyph.cid ];
 			}
-			CGContextDrawImage( context, CGRectMake( x + glyph.xoffset, y + glyph.yoffset, glyph.width, glyph.height ), imgGlyph );
+			NSLog( @"%d", glyph.yoffset );
+			CGContextDrawImage( context, CGRectMake( x + glyph.xoffset, h-glyph.height-glyph.yoffset, glyph.width, glyph.height ), imgGlyph );
 			x+= glyph.xadvance;
 		}
 		[ self releaseCFImageDictionary: glyphCache ];
@@ -311,12 +333,12 @@ static PNBitmapFontManager *_sharedInstance = nil;
 
 @implementation PNBitmapFontLabel
 
-@synthesize text;
 @synthesize pthFont;
 
 -(id)initWithFrame:(CGRect)r fntFile:(NSString*)fntPath{
 	if( self = [ super initWithFrame: r ] ){
 		self.pthFont = fntPath;
+		// set layer shadow to UILabel defaults
 		self.layer.shadowRadius = 0.0;
 		self.layer.shadowOffset = CGSizeMake( 0.0, -2.0 );
 	}
@@ -329,18 +351,34 @@ static PNBitmapFontManager *_sharedInstance = nil;
 }
 
 -(void)drawRect:(CGRect)rect{
+	// get font from font manager
 	PNBitmapFont *font = [[ PNBitmapFontManager sharedInstance ] fontForFntPath: self.pthFont ];
+	// render text
 	UIImage *textImage = [ font imageForString: self.text ];
-	// returned image is @2x
-	CGContextRef ctx = UIGraphicsGetCurrentContext();
-	CGContextSaveGState( ctx );
-	CGContextScaleCTM( ctx, 0.5, 0.5 );
-	[ textImage drawInRect: rect ];
-	CGContextRestoreGState( ctx );
+	// construct display rect for text
+	CGPoint pt = rect.origin;
+	CGSize rsz = rect.size;
+	CGSize isz = textImage.size;
+	CGRect r = CGRectMake( pt.x, pt.y, isz.width, isz.height );
+	if( isz.height > rsz.height * 1.5 ){
+		// if returned image height is closer to twice the rect height, assume font is @2x
+		r.size.width = isz.width * 0.5;
+		r.size.height = isz.height * 0.5;
+	}
+	// align rendered text
+	switch ( self.textAlignment ) {
+		case UITextAlignmentRight:
+			r.origin.x = rect.origin.x + rsz.width - r.size.width;
+			break;
+		case UITextAlignmentCenter:
+			r.origin.x = rect.origin.x + (rsz.width*0.5) - (r.size.width*0.5);
+			break;
+	}
+	// draw rendered text in constructed rect
+	[ textImage drawInRect: r ];
 }
 
 -(void)dealloc{
-	[ self.text release ];
 	[ self.pthFont release ];
 	[ super dealloc ];
 }

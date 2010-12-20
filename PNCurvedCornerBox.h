@@ -16,10 +16,22 @@
  */
 
 #import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
 
 
 @interface PNCurvedCornerBox : UIView {
-
+	CGFloat				cornerRadius;
+	UIColor				*borderColor;
+	CGFloat				borderWidth;
+	CAGradientLayer		*gradientLayer;
+	UIColor				*gradientTopColor;
+	UIColor				*gradientBottomColor;
 }
+@property( nonatomic, assign ) CGFloat				cornerRadius;
+@property( nonatomic, retain ) UIColor				*borderColor;
+@property( nonatomic, assign ) CGFloat				borderWidth;
+@property( nonatomic, retain ) CAGradientLayer		*gradientLayer;
+@property( nonatomic, retain ) UIColor				*gradientTopColor;
+@property( nonatomic, retain ) UIColor				*gradientBottomColor;
 
 @end

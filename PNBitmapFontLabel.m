@@ -104,12 +104,15 @@
 @synthesize pthFnt;
 @synthesize dctPages;
 @synthesize dctGlyphs;
+@synthesize dctGlyphCache;
+
 
 -(id)initWithFntFilePath:(NSString*)fntPath{
 	if( self=[super init] ){
 		self.pthFnt = fntPath;
 		self.dctPages = nil;
 		self.dctGlyphs = nil;
+		self.dctGlyphCache = nil;
 		lineHeight = 0;
 	}
 	return( self );
@@ -125,8 +128,14 @@
 
 -(void)dealloc{
 	[ self.pthFnt release ];
-	[ self releaseCFImageDictionary: self.dctPages ];
-	[ self.dctPages release ];
+	if( self.dctGlyphCache != nil ){
+		[ self releaseCFImageDictionary: self.dctGlyphCache ];
+		[ self.dctGlyphCache release ];
+	}
+	if( self.dctPages != nil ){
+		[ self releaseCFImageDictionary: self.dctPages ];
+		[ self.dctPages release ];
+	}
 	[ self.dctGlyphs release ];
 	[ super dealloc ];
 }
@@ -249,29 +258,31 @@
 	
 	if( context != nil ){
 		
-		// step through glpyhs
-		NSMutableDictionary *glyphCache = [[ NSMutableDictionary alloc ] init ];
+		/* step through glpyhs */
+		if( self.dctGlyphCache == nil ){
+			NSMutableDictionary *glyphCache = [[ NSMutableDictionary alloc ] init ];
+			self.dctGlyphCache = glyphCache;
+			[ glyphCache release ];
+		}
 		for ( i=0; i<l; i++) {
 			glyph = [ glyphs objectAtIndex: i ];
 			imgPage = (CGImageRef)[ (NSValue*)[ dctPages objectForKey: glyph.page ] nonretainedObjectValue ];
-			imgGlyph = (CGImageRef)[ (NSValue*)[ glyphCache objectForKey: glyph.cid ] nonretainedObjectValue ];
+			imgGlyph = (CGImageRef)[ (NSValue*)[ dctGlyphCache objectForKey: glyph.cid ] nonretainedObjectValue ];
 			if( imgGlyph == nil ){
 				imgGlyph = CGImageCreateWithImageInRect( imgPage, CGRectMake(glyph.x, glyph.y, glyph.width, glyph.height ) );
-				[ glyphCache setObject: [ NSValue valueWithNonretainedObject: (id)imgGlyph ] forKey: glyph.cid ];
+				[ dctGlyphCache setObject: [ NSValue valueWithNonretainedObject: (id)imgGlyph ] forKey: glyph.cid ];
 			}
 			NSLog( @"%d", glyph.yoffset );
 			CGContextDrawImage( context, CGRectMake( x + glyph.xoffset, h-glyph.height-glyph.yoffset, glyph.width, glyph.height ), imgGlyph );
 			x+= glyph.xadvance;
 		}
-		[ self releaseCFImageDictionary: glyphCache ];
-		[ glyphCache release ]; 
 		
-		// render context to image
+		/* render context to image */
 		CGImageRef cgOut = CGBitmapContextCreateImage( context );
 		// clear context
 		CGRect imageRect = CGRectMake(0, 0, w, h);
 		CGContextClearRect( context, imageRect );
-		// darw image back in, which somehow magically flips it back up
+		// draw image back in, which flips it back rightside-up
 		CGContextDrawImage( context, imageRect, cgOut );
 		CGImageRelease( cgOut );
 		// now return

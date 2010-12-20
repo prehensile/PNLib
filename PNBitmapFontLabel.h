@@ -53,14 +53,16 @@
 
 
 @interface PNBitmapFont : NSObject {
-	NSDictionary	*dctPages;
-	NSDictionary	*dctGlyphs;
-	NSString		*pthFnt;
-	NSInteger		lineHeight;
+	NSDictionary			*dctPages;
+	NSDictionary			*dctGlyphs;
+	NSMutableDictionary		*dctGlyphCache;
+	NSString				*pthFnt;
+	NSInteger				lineHeight;
 }
-@property( nonatomic, retain )	NSDictionary	*dctPages;
-@property( nonatomic, copy )	NSString		*pthFnt;
-@property( nonatomic, retain )	NSDictionary	*dctGlyphs;
+@property( nonatomic, retain )	NSDictionary			*dctPages;
+@property( nonatomic, copy )	NSString				*pthFnt;
+@property( nonatomic, retain )	NSDictionary			*dctGlyphs;
+@property( nonatomic, retain )	NSMutableDictionary		*dctGlyphCache;
 -(id)initWithFntFilePath:(NSString*)fntPath;
 -(UIImage*)imageForString:(NSString*)inString;
 @end

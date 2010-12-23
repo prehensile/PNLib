@@ -46,19 +46,27 @@
 	[ c retain ];
 	[ borderColor release ];
 	borderColor = c;
-	self.layer.borderColor = c.CGColor;
+	if( gradientLayer != nil ){
+		gradientLayer.borderColor = c.CGColor;
+		self.layer.borderColor = nil;
+	} else self.layer.borderColor = c.CGColor;
 }
 
 -(void)setBorderWidth:(CGFloat)w{
 	borderWidth = w;
-	self.layer.borderWidth = w;
+	if( gradientLayer != nil ){
+		gradientLayer.borderWidth = w;
+		self.layer.borderWidth = 0;
+	} else self.layer.borderWidth = w;
 }
 
 -(CAGradientLayer*)gradientLayer{
 	if( gradientLayer == nil ){
 		gradientLayer = [[ CAGradientLayer alloc ] init ];
-		gradientLayer.frame = self.layer.bounds;
-		gradientLayer.cornerRadius = self.layer.cornerRadius;
+		gradientLayer.frame = self.bounds;
+		[ self setBorderColor: borderColor ];
+		[ self setBorderWidth: borderWidth ];
+		[ self setCornerRadius: cornerRadius ];
 		UIView *holder = [[ UIView alloc ] initWithFrame: self.bounds ];
 		[ holder.layer addSublayer: gradientLayer ];
 		[ self insertSubview: holder atIndex: 0 ];

@@ -221,7 +221,7 @@
 	[ pagesOut release ];
 }
 
--(UIImage*)imageForString:(NSString*)inString{
+-(UIImage*)imageForString:(NSString*)inString textColor:(UIColor*)textColor{
 	
 	if( self.dctGlyphs == nil ) [ self loadParseFont ];
 	
@@ -279,11 +279,15 @@
 		
 		/* render context to image */
 		CGImageRef cgOut = CGBitmapContextCreateImage( context );
+		
 		// clear context
 		CGRect imageRect = CGRectMake(0, 0, w, h);
 		CGContextClearRect( context, imageRect );
-		// draw image back in, which flips it back rightside-up
-		CGContextDrawImage( context, imageRect, cgOut );
+		// set clipping mask to rendered text image
+		CGContextClipToMask( context, imageRect, cgOut );
+		// fill in textColor
+		CGContextSetFillColorWithColor( context, textColor.CGColor );
+		CGContextFillRect( context, imageRect );	
 		CGImageRelease( cgOut );
 		// now return
 		cgOut = CGBitmapContextCreateImage( context );
@@ -365,7 +369,7 @@ static PNBitmapFontManager *_sharedInstance = nil;
 	// get font from font manager
 	PNBitmapFont *font = [[ PNBitmapFontManager sharedInstance ] fontForFntPath: self.pthFont ];
 	// render text
-	UIImage *textImage = [ font imageForString: self.text ];
+	UIImage *textImage = [ font imageForString: self.text textColor: self.textColor ];
 	// construct display rect for text
 	CGPoint pt = rect.origin;
 	CGSize rsz = rect.size;

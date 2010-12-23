@@ -64,7 +64,7 @@
 @property( nonatomic, retain )	NSDictionary			*dctGlyphs;
 @property( nonatomic, retain )	NSMutableDictionary		*dctGlyphCache;
 -(id)initWithFntFilePath:(NSString*)fntPath;
--(UIImage*)imageForString:(NSString*)inString;
+-(UIImage*)imageForString:(NSString*)inString textColor:(UIColor*)textColor;
 @end
 
 

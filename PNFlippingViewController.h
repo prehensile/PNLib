@@ -17,6 +17,7 @@
 
 @class PNFlippingViewController;
 
+#define	kPNFlippingViewControllerTransitionDuration		1.0
 
 @interface PNFlipsideViewController : UIViewController {
 	UIImage						*flipsideImage;
@@ -34,10 +35,14 @@
 
 
 @interface PNFlippingViewController : UIViewController {
-	PNFlipsideViewController		*flipsideViewController;
+	UIView							*holdingView;
+	PNFlipsideViewController		*_flipsideViewControllerInternal;
+	UIViewController				*flipsideViewController;
 }
 
-@property( nonatomic, retain )	PNFlipsideViewController		*flipsideViewController;
+@property( nonatomic, retain )	PNFlipsideViewController		*_flipsideViewControllerInternal;
+@property( nonatomic, retain )	UIViewController				*flipsideViewController;
+@property( nonatomic, retain ) 	UIView							*holdingView;
 
 -(void)showFlipside:(BOOL)bShowFlipside animated:(BOOL)bAnimated;
 

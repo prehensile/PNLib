@@ -23,6 +23,13 @@
 
 #define PNBitmapFontNoPathException		@"NoFontPathException"
 
+@interface PNBitmapFontControlCharacter : NSObject {
+	unichar		chr;
+}
+@property( nonatomic, assign )	unichar		chr;
+-(id)initWithCharacter:(unichar)inChr;
+@end;
+
 @interface PNBitmapFontGlyph : NSObject {
 	NSString	*cid;
 	NSInteger	x;
@@ -64,7 +71,10 @@
 @property( nonatomic, retain )	NSDictionary			*dctGlyphs;
 @property( nonatomic, retain )	NSMutableDictionary		*dctGlyphCache;
 -(id)initWithFntFilePath:(NSString*)fntPath;
--(UIImage*)imageForString:(NSString*)inString textColor:(UIColor*)textColor;
+-(UIImage*)imageForString:(NSString*)inString
+				textColor:(UIColor*)textColor
+				 numberOfLines:(NSInteger)numLinesIn
+			lineBreakMode:(UILineBreakMode)lineBreakMode;
 @end
 
 
@@ -73,19 +83,19 @@
 }
 @property( nonatomic, retain )	NSMutableDictionary		*dctFonts;
 +(PNBitmapFontManager*)sharedInstance;
--(PNBitmapFont*)fontForFntPath:(NSString*)fntPath;
+-(PNBitmapFont*)fontForFontName:(NSString*)fontName;
 -(void)unloadFonts;
 @end
 
 
 @interface PNBitmapFontLabel : UILabel {
-	NSString		*pthFont;
+	NSString		*fontName;
 }
 /**
  * The path to a .fnt file which this label will use to render text.
  */
-@property( nonatomic, copy )	NSString		*pthFont;
--(id)initWithFrame:(CGRect)r fntFile:(NSString*)fntPath;
+@property( nonatomic, copy )	NSString		*fontName;
+-(id)initWithFrame:(CGRect)r fontName:(NSString*)inFontName;
 @end
 
 

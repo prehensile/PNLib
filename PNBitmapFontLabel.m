@@ -119,7 +119,7 @@
 @synthesize dctPages;
 @synthesize dctGlyphs;
 @synthesize dctGlyphCache;
-
+@synthesize lineHeight;
 
 -(id)initWithFntFilePath:(NSString*)fntPath{
 	if( self=[super init] ){
@@ -253,7 +253,7 @@
 		NSInteger		trailingPtr=0,trailingLineWidth=0;
 		NSString		*inString		= label.text;
 		NSInteger		numLinesLabel	= label.numberOfLines;
-		CGSize			szLbl			= label.frame.size;
+		CGSize			targetSize		= label.frame.size;
 		NSInteger		l				= [ inString length ];
 		NSInteger		currentLine		= 1;
 		NSMutableArray	*lineWidths		= [[ NSMutableArray alloc ] init ];
@@ -264,6 +264,11 @@
 		PNBitmapFontGlyph				*g;
 		PNBitmapFontControlCharacter	*cc;
 		
+		// retina display
+		if( [PNBitmapFontManager deviceIs2x] ){
+			targetSize.width = targetSize.width * 2;
+			targetSize.height = targetSize.height * 2;
+		}
 		
 		// first pass: calculate width & get glyphs
 		for( i=0; i<l; i++ ){
@@ -306,7 +311,7 @@
 					}
 					glyph = g;
 					// if we're going to overrun the label frame, do linebreaks
-					if( lineWidth + g.xadvance > szLbl.width ){
+					if( lineWidth + g.xadvance > targetSize.width ){
 						NSLog( @"%d", label.lineBreakMode );
 						switch ( label.lineBreakMode ) {
 							// TODO: implement these truncation modes
@@ -354,7 +359,7 @@
 		[ lineWidths addObject: [ NSNumber numberWithInt: lineWidth ] ];
 		
 		//w = maxLineWidth;
-		w = szLbl.width;
+		w = targetSize.width;
 		h = lineHeight * currentLine;
 		xMargin = minXMargin;
 		
@@ -477,6 +482,14 @@ static PNBitmapFontManager *_sharedInstance = nil;
 	return( _sharedInstance );
 }
 
++(BOOL)deviceIs2x{
+	UIScreen *ms = [UIScreen mainScreen];
+	if ([ms respondsToSelector:@selector(scale)])
+		if( [ ms scale ] == 2 )
+			return YES;
+	return NO;
+}
+
 -(PNBitmapFont*)fontForFontName:(NSString*)fontName{
 	// create master font dictionary, if needed
 	if( self.dctFonts == nil ){
@@ -489,10 +502,7 @@ static PNBitmapFontManager *_sharedInstance = nil;
 	if( font == nil ){
 		// font not loaded, load it
 		NSString *fntPath = nil;
-		if ([[UIScreen mainScreen] respondsToSelector:@selector(scale)])
-			if( [[UIScreen mainScreen] scale] == 2 )
-				// retina display (or 2x ipad)
-				fntPath = [[ NSBundle mainBundle ] pathForResource: [ fontName stringByAppendingString:@"@2x"] ofType: @"fnt" ];
+		if( [ PNBitmapFontManager deviceIs2x ] )fntPath = [[ NSBundle mainBundle ] pathForResource: [ fontName stringByAppendingString:@"@2x"] ofType: @"fnt" ];
 		if( fntPath == nil ) fntPath = [[ NSBundle mainBundle ] pathForResource: fontName ofType: @"fnt" ];
 		font = [[ PNBitmapFont alloc ] initWithFntFilePath: fntPath ];
 		[ self.dctFonts setObject: font forKey: fontName ];
@@ -516,6 +526,7 @@ static PNBitmapFontManager *_sharedInstance = nil;
 @implementation PNBitmapFontLabel
 
 @synthesize fontName;
+@synthesize bitmapFont;
 
 -(id)initWithFrame:(CGRect)r fontName:(NSString*)inFontName{
 	if( self = [ super initWithFrame: r ] ){
@@ -532,26 +543,34 @@ static PNBitmapFontManager *_sharedInstance = nil;
 	[ super setShadowColor: color ];
 }
 
+-(PNBitmapFont*)bitmapFont{
+	if( bitmapFont == nil && self.fontName != nil ){
+		bitmapFont = [[ PNBitmapFontManager sharedInstance ] fontForFontName: self.fontName ]; 
+	}
+	return( bitmapFont );
+}
+
 -(void)drawRect:(CGRect)rect{
 	
-	if( self.fontName != nil ){
-		// get font from font manager
-		PNBitmapFont *font = [[ PNBitmapFontManager sharedInstance ] fontForFontName: self.fontName ];
-		if( font != nil ){
-			// render text
-			UIImage *textImage = [ font imageForLabel: self ];
-			if( textImage != nil ){
-				// construct display rect for text
-				CGPoint pt = rect.origin;
-				CGSize rsz = rect.size;
-				CGSize isz = textImage.size;
-				CGRect r = CGRectMake( pt.x, pt.y, isz.width, isz.height );
-				// center vertically, same as UILabel
-				r.origin.y = floorf( rect.origin.y + (rsz.height*0.5)-(r.size.height*0.5) );
-				// draw rendered text in constructed rect
-				[ textImage drawInRect: r ];
-				return;
+	if( self.bitmapFont != nil ){
+		// render text
+		UIImage *textImage = [ bitmapFont imageForLabel: self ];
+		if( textImage != nil ){
+			// construct display rect for text
+			CGPoint pt = rect.origin;
+			CGSize rsz = rect.size;
+			CGSize isz = textImage.size;
+			// retina support
+			if( [PNBitmapFontManager deviceIs2x] ){
+				isz.width *= 0.5;
+				isz.height *=0.5;
 			}
+			CGRect r = CGRectMake( pt.x, pt.y, isz.width, isz.height );
+			// center vertically, same as UILabel
+			r.origin.y = floorf( rect.origin.y + (rsz.height*0.5)-(r.size.height*0.5) );
+			// draw rendered text in constructed rect
+			[ textImage drawInRect: r ];
+			return;
 		}
 	}
 	

@@ -73,6 +73,7 @@
 @property( nonatomic, copy )	NSString				*pthFnt;
 @property( nonatomic, retain )	NSDictionary			*dctGlyphs;
 @property( nonatomic, retain )	NSMutableDictionary		*dctGlyphCache;
+@property( nonatomic, readonly )	NSInteger			lineHeight;
 -(id)initWithFntFilePath:(NSString*)fntPath;
 -(UIImage*)imageForLabel:(PNBitmapFontLabel*)label;
 @end
@@ -83,6 +84,7 @@
 }
 @property( nonatomic, retain )	NSMutableDictionary		*dctFonts;
 +(PNBitmapFontManager*)sharedInstance;
++(BOOL)deviceIs2x;
 -(PNBitmapFont*)fontForFontName:(NSString*)fontName;
 -(void)unloadFonts;
 @end
@@ -90,11 +92,13 @@
 
 @interface PNBitmapFontLabel : UILabel {
 	NSString		*fontName;
+	PNBitmapFont	*bitmapFont;
 }
 /**
  * The path to a .fnt file which this label will use to render text.
  */
-@property( nonatomic, copy )	NSString		*fontName;
+@property( nonatomic, copy )	NSString				*fontName;
+@property( nonatomic, readonly ) PNBitmapFont			*bitmapFont;
 -(id)initWithFrame:(CGRect)r fontName:(NSString*)inFontName;
 @end
 

@@ -240,10 +240,7 @@
 	}
 }
 
--(UIImage*)imageForString:(NSString*)inString
-				textColor:(UIColor*)textColor
-				 numberOfLines:(NSInteger)numLinesIn
-			lineBreakMode:(UILineBreakMode)lineBreakMode{
+-(UIImage*)imageForLabel:(PNBitmapFontLabel*)label {
 	
 	if( self.dctGlyphs == nil ) [ self loadParseFont ];
 	
@@ -251,15 +248,22 @@
 	if( self.dctGlyphs != nil ){
 		
 		// working vars
-		NSInteger i=0,x=0,y=0,w=0,h=0;
-		NSInteger xMargin=0,minXMargin=0,yMargin=0,maxLineWidth=0,lineWidth=0;
-		NSInteger l = [ inString length ];
-		NSInteger numLines = 1;
-		unichar chr;
-		NSMutableArray *glyphs = [[ NSMutableArray alloc ] initWithCapacity: l ];
-		id glyph;
-		PNBitmapFontGlyph *g;
-		PNBitmapFontControlCharacter *cc;
+		NSInteger		i=0,x=0,y=0,w=0,h=0;
+		NSInteger		xMargin=0,minXMargin=0,yMargin=0,maxLineWidth=0,lineWidth=0;
+		NSInteger		trailingPtr=0,trailingLineWidth=0;
+		NSString		*inString		= label.text;
+		NSInteger		numLinesLabel	= label.numberOfLines;
+		CGSize			szLbl			= label.frame.size;
+		NSInteger		l				= [ inString length ];
+		NSInteger		currentLine		= 1;
+		NSMutableArray	*lineWidths		= [[ NSMutableArray alloc ] init ];
+		NSMutableArray	*glyphs			= [[ NSMutableArray alloc ] initWithCapacity: l ];
+		BOOL			newlineFlag		= NO;
+		unichar							chr;
+		id								glyph;
+		PNBitmapFontGlyph				*g;
+		PNBitmapFontControlCharacter	*cc;
+		
 		
 		// first pass: calculate width & get glyphs
 		for( i=0; i<l; i++ ){
@@ -269,20 +273,23 @@
 			if( chr < 0x20 ){ // control character
 				switch ( chr ) {
 					case 0x0A: // newline
-						if( ( numLinesIn > 0 ) && ( numLines + 1 > numLinesIn ) ){
+						if( ( numLinesLabel > 0 ) && ( currentLine + 1 > numLinesLabel ) ){
 							l=i; // don't parse any more glyphs & set length for drawing pass
 						} else {
-							if( lineWidth > maxLineWidth )  maxLineWidth = lineWidth;
-							lineWidth = 0;
-							numLines++;
+							newlineFlag = YES;
 						}
 						break;
 				}
 				if( i <l ){
 					// if we didn't just abort
-					glyph = [[ PNBitmapFontControlCharacter alloc ] initWithCharacter: chr ];
+					glyph = [[[ PNBitmapFontControlCharacter alloc ] initWithCharacter: chr ] autorelease ];
 				}
 			} else {
+				if( chr == 0x20 ){
+					// space, save these to use when wrapping
+					trailingPtr = i;
+					trailingLineWidth = lineWidth;
+				}
 				// regular character, get a glyph from parsed table
 				g = [ dctGlyphs objectForKey: [ NSString stringWithFormat:@"%d", chr ] ];
 				if( g != nil ){
@@ -292,21 +299,65 @@
 							lineWidth -= xMargin;
 							if( xMargin < minXMargin ) minXMargin = xMargin;
 						}
-						if( (numLines==1) & (g.yoffset<0) ){
+						if( (currentLine==1) & (g.yoffset<0) ){
 							yMargin = g.yoffset;
 							h -= yMargin;
 						}
 					}
-					lineWidth += g.xadvance;
 					glyph = g;
+					// if we're going to overrun the label frame, do linebreaks
+					if( lineWidth + g.xadvance > szLbl.width ){
+						NSLog( @"%d", label.lineBreakMode );
+						switch ( label.lineBreakMode ) {
+							// TODO: implement these truncation modes
+							case UILineBreakModeHeadTruncation:
+							case UILineBreakModeTailTruncation:
+							case UILineBreakModeMiddleTruncation:
+							case UILineBreakModeClip:
+								l=i;
+								break;
+							case UILineBreakModeCharacterWrap:
+								// insert a linebreak
+								glyph = [[[ PNBitmapFontControlCharacter alloc ] initWithCharacter: unicharNewline ] autorelease ];
+								newlineFlag = YES;
+								// process this character again on the next line
+								i--;
+								break;
+							case UILineBreakModeWordWrap:
+								newlineFlag = YES;
+								lineWidth = trailingLineWidth;
+								i = trailingPtr + 1;
+								glyph = nil;
+								break;
+						}
+					} else {
+						lineWidth += g.xadvance;
+					}
 				}
 			}
 			// add glyph to working array
-			if( glyph != nil ) [ glyphs addObject: glyph ];
+			if( glyph != nil ){
+				[ glyphs addObject: glyph ];
+			}
+			// process a new line
+			if( newlineFlag ){
+				if( lineWidth > maxLineWidth )  maxLineWidth = lineWidth;
+				[ lineWidths addObject: [ NSNumber numberWithInt: lineWidth ] ];
+				lineWidth = 0;
+				currentLine++;
+				newlineFlag = NO;
+				// abort if we've overrun label height
+				// if( currentLine * lineHeight > h ) l = i;
+			}
 		}
-		w = maxLineWidth;
+		// add last line to linewidths array
+		[ lineWidths addObject: [ NSNumber numberWithInt: lineWidth ] ];
+		
+		//w = maxLineWidth;
+		w = szLbl.width;
+		h = lineHeight * currentLine;
 		xMargin = minXMargin;
-		h = lineHeight * numLines;
+		
 		
 		/* second pass: render glyphs */
 		
@@ -327,31 +378,57 @@
 				self.dctGlyphCache = glyphCache;
 				[ glyphCache release ];
 			}
-			y = yMargin;
-			x = xMargin;
+			
+			newlineFlag = YES;
+			currentLine = 0;
+			
 			for ( i=0; i<l; i++) {
+				
+				// process a new line
+				if( newlineFlag ){
+					switch ( label.textAlignment ) {
+						case UITextAlignmentLeft:
+							x = xMargin;
+							break;
+						case UITextAlignmentRight:
+							x = w - [(NSNumber*)[ lineWidths objectAtIndex: currentLine ] intValue ];
+							break;
+						case UITextAlignmentCenter:
+							x = (w*0.5) - ([(NSNumber*)[ lineWidths objectAtIndex: currentLine ] intValue ]*0.5);
+							break;
+					}
+					newlineFlag = NO;
+					y = -(lineHeight*currentLine);
+					currentLine++;
+				}
+				
+				
+				// get glyph from rendering queue
 				glyph = [ glyphs objectAtIndex: i ];
+				
 				if( [ glyph isMemberOfClass: [ PNBitmapFontGlyph class ] ] ){
+					
 					// bitmap glyph, render it
 					g = (PNBitmapFontGlyph*)glyph;
 					if( g.width > 0 && g.height > 0 ){
-						imgPage = (CGImageRef)[ (NSValue*)[ dctPages objectForKey: g.page ] nonretainedObjectValue ];
+						// get glyph image from cache, or create new if needed
 						imgGlyph = (CGImageRef)[ (NSValue*)[ dctGlyphCache objectForKey: g.cid ] nonretainedObjectValue ];
 						if( imgGlyph == nil ){
+							imgPage = (CGImageRef)[ (NSValue*)[ dctPages objectForKey: g.page ] nonretainedObjectValue ];
 							imgGlyph = CGImageCreateWithImageInRect( imgPage, CGRectMake(g.x, g.y, g.width, g.height ) );
 							[ dctGlyphCache setObject: [ NSValue valueWithNonretainedObject: (id)imgGlyph ] forKey: g.cid ];
 						}
 						CGContextDrawImage( context, CGRectMake( x + g.xoffset, y+h-g.height-g.yoffset, g.width, g.height ), imgGlyph );
 					}
 					x+= g.xadvance;
+				
 				} else if( [ glyph isMemberOfClass: [ PNBitmapFontControlCharacter class ] ] ){
+					
 					// control character, act on it
 					cc = (PNBitmapFontControlCharacter*)glyph;
 					switch ( cc.chr ) {
 						case 0x0A: // newline
-							x = xMargin;
-							y -= lineHeight;
-							// TODO: implement lineBreakModes
+							newlineFlag = YES;
 							break;
 					}
 				}
@@ -366,7 +443,7 @@
 			// set clipping mask to rendered text image
 			CGContextClipToMask( context, imageRect, cgOut );
 			// fill in textColor
-			CGContextSetFillColorWithColor( context, textColor.CGColor );
+			CGContextSetFillColorWithColor( context, label.textColor.CGColor );
 			CGContextFillRect( context, imageRect );	
 			CGImageRelease( cgOut );
 			// now return
@@ -377,6 +454,7 @@
 		}
 		UIGraphicsEndImageContext();
 		[ glyphs release ];
+		[ lineWidths release ];
 		
 		return( [ imageOut autorelease ] );
 	}
@@ -461,25 +539,13 @@ static PNBitmapFontManager *_sharedInstance = nil;
 		PNBitmapFont *font = [[ PNBitmapFontManager sharedInstance ] fontForFontName: self.fontName ];
 		if( font != nil ){
 			// render text
-			UIImage *textImage = [ font imageForString: self.text
-											 textColor: self.textColor
-										 numberOfLines: self.numberOfLines
-										 lineBreakMode: self.lineBreakMode ];
+			UIImage *textImage = [ font imageForLabel: self ];
 			if( textImage != nil ){
 				// construct display rect for text
 				CGPoint pt = rect.origin;
 				CGSize rsz = rect.size;
 				CGSize isz = textImage.size;
 				CGRect r = CGRectMake( pt.x, pt.y, isz.width, isz.height );
-				// align rendered text
-				switch ( self.textAlignment ) {
-					case UITextAlignmentRight:
-						r.origin.x = floorf( rect.origin.x + rsz.width - r.size.width );
-						break;
-					case UITextAlignmentCenter:
-						r.origin.x = floorf( rect.origin.x + (rsz.width*0.5) - (r.size.width*0.5) );
-						break;
-				}
 				// center vertically, same as UILabel
 				r.origin.y = floorf( rect.origin.y + (rsz.height*0.5)-(r.size.height*0.5) );
 				// draw rendered text in constructed rect

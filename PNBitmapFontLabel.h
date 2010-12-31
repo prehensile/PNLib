@@ -22,6 +22,9 @@
  */
 
 #define PNBitmapFontNoPathException		@"NoFontPathException"
+#define unicharNewline					0x0A
+
+@class PNBitmapFontLabel;
 
 @interface PNBitmapFontControlCharacter : NSObject {
 	unichar		chr;
@@ -71,10 +74,7 @@
 @property( nonatomic, retain )	NSDictionary			*dctGlyphs;
 @property( nonatomic, retain )	NSMutableDictionary		*dctGlyphCache;
 -(id)initWithFntFilePath:(NSString*)fntPath;
--(UIImage*)imageForString:(NSString*)inString
-				textColor:(UIColor*)textColor
-				 numberOfLines:(NSInteger)numLinesIn
-			lineBreakMode:(UILineBreakMode)lineBreakMode;
+-(UIImage*)imageForLabel:(PNBitmapFontLabel*)label;
 @end
 
 

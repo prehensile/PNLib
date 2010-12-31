@@ -21,8 +21,9 @@
  * Use is subject to license terms.
  */
 
-#define PNBitmapFontNoPathException		@"NoFontPathException"
-#define unicharNewline					0x0A
+#define PNBitmapFontNoPathException				@"NoFontPathException"
+#define PNBitmapFontPageLoadFailException		@"PageLoadFailException"
+#define unicharNewline							0x0A
 
 @class PNBitmapFontLabel;
 

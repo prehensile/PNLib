@@ -156,12 +156,14 @@
 
 -(void)loadParseFont{
 	
+	NSException *thisException;
+	
 	if( self.pthFnt == nil ){
 		// no font path, throw an exception
-		NSException *exception = [ NSException exceptionWithName: PNBitmapFontNoPathException
-														  reason: @"PNBitmapFont has no font path"
-														userInfo: nil ];
-		[ exception raise ];
+		thisException = [ NSException exceptionWithName: PNBitmapFontNoPathException
+												 reason: @"PNBitmapFont has no font path"
+											   userInfo: nil ];
+		[ thisException raise ];
 		return;
 	}
 	
@@ -185,6 +187,7 @@
 		NSFileManager *fm = [ NSFileManager defaultManager ];
 		NSData *datPage;
 		PNBitmapFontGlyph *glyph;
+		NSError *err = nil;
 		
 		while( idxEnd < l ){
 			
@@ -207,7 +210,8 @@
 				scratchString = [[ [ parts objectAtIndex: 2 ] componentsSeparatedByString:@"\"" ] objectAtIndex: 1 ];
 				scratchString = [ [ self.pthFnt stringByDeletingLastPathComponent ] stringByAppendingPathComponent: scratchString ];
 				// load
-				datPage = [ fm contentsAtPath: scratchString ];
+				err = nil;
+				datPage = [[ NSData alloc ] initWithContentsOfFile: scratchString options: NSUncachedRead error: err ];
 				if( datPage != nil ){
 					srcPage = CGDataProviderCreateWithCFData( (CFDataRef)datPage );
 					if( srcPage != nil ){
@@ -217,7 +221,16 @@
 							scratchString = [[ [ parts objectAtIndex: 1 ] componentsSeparatedByString:@"=" ] objectAtIndex: 1 ];
 							[ pagesOut setObject: [ NSValue valueWithNonretainedObject: (id)imgPage ] forKey: scratchString ];
 						}
+						CGDataProviderRelease( srcPage );
 					}
+					[ datPage release ];
+				} else {
+					// failed to load page image, throw an exception
+					NSException *thisException = [ NSException exceptionWithName: PNBitmapFontPageLoadFailException
+																		  reason: @"PNBitmapFont failed to load a page image"
+																		userInfo: err ];
+					[ thisException raise ];
+					return;
 				}
 			} else if( [ scratchString isEqualToString: @"char" ] ){
 				// parse a glpyh line

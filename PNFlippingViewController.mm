@@ -117,8 +117,9 @@
 		UIImage *fi = UIGraphicsGetImageFromCurrentImageContext();
 		
 		// blur image
-		ImageWrapper *wrapper = Image::createImage( fi, sz.width, sz.height );
-		UIImage *blurred = wrapper.image->gaussianBlur().image->toUIImage();
+		/*ImageWrapper *wrapper = Image::createImage( fi, sz.width, sz.height );
+		UIImage *blurred = wrapper.image->gaussianBlur().image->toUIImage();*/
+		UIImage *blurred = fi;
 		
 		// draw blurred image, darkend, flipped rightside-up from uiimage
 		/*CGContextSetBlendMode( ctx, kCGBlendModeDarken );

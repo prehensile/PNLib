@@ -184,7 +184,6 @@
 		NSMutableDictionary *glyphsOut = [[ NSMutableDictionary alloc ] init ];
 		CGDataProviderRef srcPage;
 		CGImageRef imgPage;
-		NSFileManager *fm = [ NSFileManager defaultManager ];
 		NSData *datPage;
 		PNBitmapFontGlyph *glyph;
 		NSError *err = nil;
@@ -211,7 +210,7 @@
 				scratchString = [ [ self.pthFnt stringByDeletingLastPathComponent ] stringByAppendingPathComponent: scratchString ];
 				// load
 				err = nil;
-				datPage = [[ NSData alloc ] initWithContentsOfFile: scratchString options: NSUncachedRead error: err ];
+				datPage = [[ NSData alloc ] initWithContentsOfFile: scratchString options: NSUncachedRead error: &err ];
 				if( datPage != nil ){
 					srcPage = CGDataProviderCreateWithCFData( (CFDataRef)datPage );
 					if( srcPage != nil ){
@@ -228,7 +227,7 @@
 					// failed to load page image, throw an exception
 					NSException *thisException = [ NSException exceptionWithName: PNBitmapFontPageLoadFailException
 																		  reason: @"PNBitmapFont failed to load a page image"
-																		userInfo: err ];
+																		userInfo: err.userInfo ];
 					[ thisException raise ];
 					return;
 				}
